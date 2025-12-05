@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AHMAS Spa OS - Home Service Edition</title>
+    <title>CarliTech Web OS - Agency Edition</title>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -13,70 +13,77 @@
         body { font-family: 'Inter', sans-serif; background-color: #020617; color: #e2e8f0; }
         .glass-panel { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
         .glass-input { background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(255, 255, 255, 0.1); color: white; transition: all 0.2s; }
-        .glass-input:focus { border-color: #10b981; outline: none; box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2); }
+        .glass-input:focus { border-color: #3b82f6; outline: none; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #0f172a; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
         
-        /* Branding - Using Emerald/Green for Spa Vibes */
-        .text-brand { color: #10b981; }
-        .bg-brand { background-color: #10b981; }
-        .bg-brand-hover:hover { background-color: #059669; }
-        .border-brand { border-color: #10b981; }
+        /* Branding - Using Blue/Cyan for Tech/Web Dev Vibes */
+        .text-brand { color: #3b82f6; }
+        .bg-brand { background-color: #3b82f6; }
+        .bg-brand-hover:hover { background-color: #2563eb; }
+        .border-brand { border-color: #3b82f6; }
         
         /* Utils */
         .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
         /* Chart Styles */
-        .chart-grid line { stroke: #1e293b; stroke-dasharray: 4; }
-        .chart-line { fill: none; stroke: #10b981; stroke-width: 2; }
-        .chart-area { fill: rgba(16, 185, 129, 0.1); }
+        .chart-line { fill: none; stroke: #3b82f6; stroke-width: 2; }
+        .chart-area { fill: rgba(59, 130, 246, 0.1); }
+
+        /* Drag and Drop Visuals */
+        .task-card { cursor: grab; transition: transform 0.2s, box-shadow 0.2s; }
+        .task-card:active { cursor: grabbing; transform: scale(1.02); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); }
+        .droppable-area { transition: background-color 0.2s; }
+        .droppable-area.drag-over { background-color: rgba(59, 130, 246, 0.1); border: 2px dashed #3b82f6; }
+        .integration-card { transition: all 0.3s; }
+        .integration-card:hover { transform: translateY(-2px); border-color: #3b82f6; }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
+        const { useState, useEffect, useMemo, useRef } = React;
 
-        // --- MOCK DATA & SERVICES ---
-
+        // --- UTILS ---
         const generateId = () => Math.random().toString(36).substr(2, 9);
         const formatPHP = (num) => `₱${num.toLocaleString('en-PH')}`;
+        const secureStore = {
+            set: (key, value) => localStorage.setItem(key, btoa(JSON.stringify(value))),
+            get: (key, def) => {
+                const item = localStorage.getItem(key);
+                if (!item) return def;
+                try { return JSON.parse(atob(item)); } catch { return def; }
+            }
+        };
 
-        // Initial Data Sets - TAILORED FOR MASSAGE/SPA
+        // --- MOCK DATA (WEB DEV FOCUSED) ---
         const INITIAL_LEADS = [
-            { id: 'l1', name: "Maria Santos", contact: "VIP Client", email: "maria.s@gmail.com", status: "New", source: "Facebook Ad", score: 88, activity: [], notes: "Complained of back pain" },
-            { id: 'l2', name: "TechHub Corp", contact: "HR Manager", email: "hr@techhub.ph", status: "Contacted", source: "Cold Call", score: 95, activity: [{type: 'email', date: Date.now(), note: 'Sent Corp Wellness Proposal'}], notes: "Interested in monthly employee massage" },
-            { id: 'l3', name: "Azure Residences", contact: "Admin Office", email: "admin@azure.ph", status: "Proposal", source: "Walk-in", score: 65, activity: [], notes: "Partnership for tenants" }
+            { id: 'l1', name: "Atty. Gonzales Law", contact: "Partner", email: "info@gonzaleslaw.ph", status: "New", source: "Outdated Website", score: 92, activity: [], notes: "Site is not mobile responsive. Needs overhaul." },
+            { id: 'l2', name: "Manila Coffee Co.", contact: "Owner", email: "marketing@manilacoffee.com", status: "Contacted", source: "LinkedIn", score: 85, activity: [], notes: "Wants Shopify store setup." },
+            { id: 'l3', name: "Vista Real Estate", contact: "Broker", email: "sales@vista.ph", status: "Proposal", source: "Referral", score: 70, activity: [], notes: "Needs listing portal with map integration." }
         ];
-
-        const INITIAL_MESSAGES = [
-            { id: 'm1', leadId: 'l1', platform: 'messenger', sender: 'Maria Santos', preview: 'Do you have availability for 2 people tonight?', time: '10:30 AM', unread: true },
-            { id: 'm2', leadId: 'l2', platform: 'email', sender: 'TechHub HR', preview: 'Can you send the rates for 50 employees?', time: 'Yesterday', unread: false },
-            { id: 'm3', leadId: 'l3', platform: 'sms', sender: '+63 917 123 4567', preview: 'We approved your flyer distribution.', time: '2 days ago', unread: false }
-        ];
-
+        
         const INITIAL_INVOICES = [
-            { id: 'inv1', client: "Maria Santos", amount: 1500, status: 'Paid', date: '2025-10-15', desc: 'Twin Massage Package' },
-            { id: 'inv2', client: "TechHub Corp", amount: 25000, status: 'Pending', date: '2025-11-01', desc: 'Corporate Wellness Deposit' }
+            { id: 'inv1', client: "Manila Coffee Co.", amount: 45000, status: 'Paid', date: '2025-10-15', desc: 'E-commerce Setup (50% Down)' },
+            { id: 'inv2', client: "Vista Real Estate", amount: 12000, status: 'Pending', date: '2025-11-01', desc: 'Monthly SEO Retainer' }
         ];
 
         const INITIAL_TASKS = [
-            { id: 't1', title: "Confirm Therapist Schedule", client: "Internal", status: "In Progress", priority: "High", assignee: "Admin" },
-            { id: 't2', title: "Restock Massage Oils", client: "Inventory", status: "Backlog", priority: "Medium", assignee: "Ops" },
-            { id: 't3', title: "Follow up with Azure Admin", client: "Azure Residences", status: "Done", priority: "Low", assignee: "Sales" }
+            { id: 't1', title: "Design Homepage UI", client: "Atty. Gonzales", status: "In Progress", priority: "High", assignee: "Designer" },
+            { id: 't2', title: "Fix Checkout Bug", client: "Manila Coffee", status: "Backlog", priority: "Medium", assignee: "Dev" },
+            { id: 't3', title: "Deploy to Vercel", client: "Portfolio Site", status: "Done", priority: "Low", assignee: "Dev" }
         ];
 
         // --- SERVICE LAYER ---
         const APIService = {
             getKey: (provider) => {
-                const settings = JSON.parse(localStorage.getItem('ahmas_settings') || '{}');
+                const settings = secureStore.get('carlitech_settings', {});
                 return settings[provider] || null;
             },
             
-            // AI Integration (Gemini)
             generateContent: async (prompt) => {
                 const apiKey = APIService.getKey('gemini');
                 if (!apiKey) throw new Error("Please set your Gemini API Key in Settings.");
@@ -92,34 +99,30 @@
                 } catch (error) { throw error; }
             },
 
-            // Simulated Backend Actions
-            sendEmail: async (to, subject, body) => {
-                return new Promise(resolve => setTimeout(() => resolve(true), 1000));
-            },
-            
-            createStripeInvoice: async (amount, client) => {
-                return new Promise(resolve => setTimeout(() => resolve(`https://pay.ahmas.ph/${generateId()}`), 1500));
-            },
-
-            getAdStats: async () => {
-                // Mock PHP Values
-                return { spend: 12500, leads: 85, cpl: 147, active_campaigns: 2 }; 
-            }
+            sendEmail: async (to, subject, body) => new Promise(r => setTimeout(() => r(true), 800)),
+            createStripeInvoice: async (amount, client) => new Promise(r => setTimeout(() => r(`https://pay.carlitech.ph/${generateId()}`), 1000)),
+            getAdStats: async () => ({ spend: 5000, leads: 12, cpl: 416, active_campaigns: 1 })
         };
 
         const Storage = {
-            getData: (key, def) => JSON.parse(localStorage.getItem(`ahmas_${key}`) || JSON.stringify(def)),
-            saveData: (key, data) => localStorage.setItem(`ahmas_${key}`, JSON.stringify(data)),
-            getSettings: () => JSON.parse(localStorage.getItem('ahmas_settings') || '{}'),
-            saveSettings: (settings) => localStorage.setItem('ahmas_settings', JSON.stringify(settings)),
+            getLeads: () => secureStore.get('carlitech_leads', INITIAL_LEADS),
+            saveLeads: (leads) => secureStore.set('carlitech_leads', leads),
+            getSettings: () => secureStore.get('carlitech_settings', {}),
+            saveSettings: (settings) => secureStore.set('carlitech_settings', settings),
+            getInbox: () => secureStore.get('carlitech_inbox', []),
+            saveInbox: (inbox) => secureStore.set('carlitech_inbox', inbox),
+            getInvoices: () => secureStore.get('carlitech_invoices', INITIAL_INVOICES),
+            saveInvoices: (inv) => secureStore.set('carlitech_invoices', inv),
+            getTasks: () => secureStore.get('carlitech_tasks', INITIAL_TASKS),
+            saveTasks: (tasks) => secureStore.set('carlitech_tasks', tasks)
         };
 
-        // --- CUSTOM UI COMPONENTS ---
+        // --- GLOBAL COMPONENTS ---
 
         const Modal = ({ isOpen, onClose, title, children }) => {
             if (!isOpen) return null;
             return (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" style={{zIndex: 9999}}>
                     <div className="glass-panel w-full max-w-2xl rounded-xl shadow-2xl flex flex-col max-h-[90vh]">
                         <div className="p-5 border-b border-slate-700 flex justify-between items-center bg-slate-900/50 rounded-t-xl">
                             <h3 className="text-lg font-bold text-white">{title}</h3>
@@ -131,11 +134,50 @@
             );
         };
 
+        const Sidebar = ({ view, setView, isMobileOpen, setIsMobileOpen }) => (
+            <>
+                {isMobileOpen && <div className="fixed inset-0 bg-black/50 z-20 lg:hidden" onClick={() => setIsMobileOpen(false)}></div>}
+                <aside className={`fixed lg:static top-0 left-0 h-full w-64 bg-slate-950 border-r border-slate-800 flex flex-col z-30 transform transition-transform duration-300 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+                    <div className="p-6 flex justify-between items-center">
+                        <h1 className="text-xl font-bold text-white flex items-center">
+                            <i className="fa-solid fa-laptop-code mr-2 text-brand"></i>
+                            <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-400">CarliTech</span>
+                        </h1>
+                        <button onClick={() => setIsMobileOpen(false)} className="lg:hidden text-slate-400"><i className="fa-solid fa-times"></i></button>
+                    </div>
+                    <nav className="flex-1 px-4 space-y-1 mt-4 overflow-y-auto custom-scrollbar">
+                        {[{ id: 'dashboard', icon: 'fa-chart-pie', label: 'Overview' },
+                          { id: 'projects', icon: 'fa-trello', label: 'Dev Board' },
+                          { id: 'leads', icon: 'fa-user-group', label: 'Clients' },
+                          { id: 'calendar', icon: 'fa-calendar-days', label: 'Meetings' },
+                          { id: 'inbox', icon: 'fa-inbox', label: 'Inbox' },
+                          { id: 'growth', icon: 'fa-magnifying-glass-chart', label: 'Comp. Analysis' },
+                          { id: 'reports', icon: 'fa-file-lines', label: 'AI Proposals' },
+                          { id: 'invoices', icon: 'fa-file-invoice-dollar', label: 'Invoices' },
+                          { id: 'settings', icon: 'fa-sliders', label: 'Settings' }
+                        ].map(item => (
+                            <button key={item.id} onClick={() => { setView(item.id); setIsMobileOpen(false); }}
+                                className={`w-full text-left px-4 py-3 rounded-lg flex items-center transition-all ${view === item.id ? 'bg-brand text-white shadow-lg shadow-blue-900/40' : 'text-slate-400 hover:bg-slate-900 hover:text-white'}`}>
+                                <i className={`fa-solid ${item.icon} w-5 text-center mr-3`}></i> {item.label}
+                            </button>
+                        ))}
+                    </nav>
+                    <div className="p-4 border-t border-slate-800">
+                        <div className="flex items-center space-x-3 bg-slate-900 p-2 rounded-lg">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-brand to-cyan-300 flex items-center justify-center text-xs font-bold text-white">CT</div>
+                            <div><p className="text-xs font-medium text-white">Admin</p><p className="text-[10px] text-blue-400">● Dev Mode</p></div>
+                        </div>
+                    </div>
+                </aside>
+            </>
+        );
+
         const ChartComponent = ({ data, color, height = 200 }) => {
+            if (!data || data.length === 0) return <div className="h-full flex items-center justify-center text-slate-500 text-xs">No data yet</div>;
             const maxVal = Math.max(...data) * 1.2;
             const points = data.map((val, i) => {
                 const x = (i / (data.length - 1)) * 100;
-                const y = 100 - ((val / maxVal) * 100);
+                const y = 100 - ((val / (maxVal || 1)) * 100);
                 return `${x},${y}`;
             }).join(' ');
 
@@ -151,787 +193,288 @@
                         <path d={`M0,100 ${points} 100,100`} className="chart-area" fill={`url(#grad-${color})`} />
                         <polyline points={points} fill="none" stroke={color} strokeWidth="2" vectorEffect="non-scaling-stroke" />
                     </svg>
-                    <div className="absolute bottom-2 left-4 text-xs text-slate-500">Last 30 Days</div>
                 </div>
             );
         };
 
-        // --- MAIN APP ---
+        // --- VIEWS ---
 
-        const App = () => {
-            const [view, setView] = useState('dashboard');
-            const [leads, setLeads] = useState([]);
-            const [messages, setMessages] = useState([]);
-            const [invoices, setInvoices] = useState([]);
-            const [tasks, setTasks] = useState([]);
-            const [notification, setNotification] = useState(null);
-            const [modal, setModal] = useState({ open: false, type: null, data: null });
-            const [loading, setLoading] = useState(false);
-            const [settings, setSettings] = useState({
-                apollo: '',
-                meta: '',
-                meta_ad_account: '',
-                gemini: ''
-            });
-            const [adStats, setAdStats] = useState({ spend: 0 });
-
-            // State for Reports View (Hook fix)
-            const [reportClient, setReportClient] = useState('');
-            const [generatedReport, setGeneratedReport] = useState('');
-            const [isReportGenerating, setIsReportGenerating] = useState(false);
-
-            // State for Growth/Competitor
-            const [growthTopic, setGrowthTopic] = useState('');
-            const [compAnalysis, setCompAnalysis] = useState(null);
-            const [isGrowthLoading, setIsGrowthLoading] = useState(false);
-
-            // Load Data
-            useEffect(() => {
-                setLeads(Storage.getData('leads', INITIAL_LEADS));
-                setMessages(Storage.getData('messages', INITIAL_MESSAGES));
-                setInvoices(Storage.getData('invoices', INITIAL_INVOICES));
-                setTasks(Storage.getData('tasks', INITIAL_TASKS));
-                setSettings(Storage.getSettings());
-                APIService.getAdStats().then(setAdStats);
-            }, []);
-
-            // Auto-Save
-            useEffect(() => { Storage.saveData('leads', leads); }, [leads]);
-            useEffect(() => { Storage.saveData('messages', messages); }, [messages]);
-            useEffect(() => { Storage.saveData('invoices', invoices); }, [invoices]);
-            useEffect(() => { Storage.saveData('tasks', tasks); }, [tasks]);
-
-            const notify = (msg, type = 'success') => {
-                setNotification({ msg, type });
-                setTimeout(() => setNotification(null), 3000);
-            };
-
-            const saveSettings = () => {
-                Storage.saveSettings(settings);
-                notify("Settings saved successfully.");
-            };
-
-            // --- AUTOMATION ENGINE ---
-            const triggerAutomation = (actionType, leadData) => {
-                if (actionType === 'move_lead') {
-                    if (leadData.status === 'Contacted') {
-                        // Example Rule: Lead Contacted -> Create Task for Therapist
-                        // setTasks(prev => [...prev, {id: Date.now(), title: `Call ${leadData.name}`, status: "Backlog", priority: "High", assignee: "Sales"}]);
-                    }
-                }
-            };
-
-            // --- CORE ACTIONS ---
-
-            const handleSendEmail = async (e) => {
-                e.preventDefault();
-                setLoading(true);
-                const { to, subject, body, leadId } = modal.data;
-                try {
-                    await APIService.sendEmail(to, subject, body);
-                    const updatedLeads = leads.map(l => {
-                        if (l.id === leadId) {
-                            return { ...l, activity: [...l.activity, { type: 'email', date: Date.now(), note: `Sent: ${subject}` }]};
-                        }
-                        return l;
-                    });
-                    setLeads(updatedLeads);
-                    notify(`Message sent to ${to}`);
-                    setModal({ open: false });
-                } catch (err) { notify('Failed to send', 'error'); }
-                setLoading(false);
-            };
-
-            const handleCreateInvoice = async (e) => {
-                e.preventDefault();
-                setLoading(true);
-                const formData = new FormData(e.target);
-                const newInv = {
-                    id: generateId(),
-                    client: formData.get('client'),
-                    amount: parseFloat(formData.get('amount')),
-                    status: 'Pending',
-                    date: new Date().toISOString().split('T')[0],
-                    desc: formData.get('desc')
-                };
-                
-                await APIService.createStripeInvoice(newInv.amount, newInv.client);
-                setInvoices([newInv, ...invoices]);
-                notify('Payment Link Generated!');
-                setModal({ open: false });
-                setLoading(false);
-            };
-
-            const handleMoveLead = (id, newStatus) => {
-                const lead = leads.find(l => l.id === id);
-                if (!lead) return;
-                
-                if (!newStatus) {
-                    const statuses = ['New', 'Contacted', 'Proposal', 'Booked', 'Closed'];
-                    const currentIdx = statuses.indexOf(lead.status);
-                    newStatus = statuses[(currentIdx + 1) % statuses.length];
-                }
-
-                const updatedLeads = leads.map(l => l.id === id ? { ...l, status: newStatus } : l);
-                setLeads(updatedLeads);
-                triggerAutomation('move_lead', { ...lead, status: newStatus });
-            };
-
-            // --- VIEWS ---
-
-            const renderDashboard = () => (
-                <div className="space-y-6 animate-fade-in">
-                    <header className="flex justify-between items-center">
-                        <div>
-                            <h2 className="text-2xl font-bold text-white">Daily Spa Overview</h2>
-                            <p className="text-slate-400 text-sm">Managing Home Service Operations</p>
-                        </div>
-                        <button onClick={() => setView('leads')} className="bg-brand hover:bg-green-600 text-white px-4 py-2 rounded-lg font-medium shadow-lg shadow-green-900/20 transition-all">
-                            <i className="fa-solid fa-plus mr-2"></i> Book Client
-                        </button>
-                    </header>
-
-                    {/* KPI Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div className="glass-panel p-5 rounded-xl border-l-4 border-brand">
-                            <p className="text-slate-400 text-xs uppercase tracking-wider">Bookings (MTD)</p>
-                            <h3 className="text-2xl font-bold text-white mt-1">{formatPHP(145000)}</h3>
-                            <p className="text-xs text-green-400 mt-1"><i className="fa-solid fa-arrow-up"></i> 8% growth</p>
-                        </div>
-                        <div className="glass-panel p-5 rounded-xl border-l-4 border-blue-500">
-                            <p className="text-slate-400 text-xs uppercase tracking-wider">Corporate Leads</p>
-                            <h3 className="text-2xl font-bold text-white mt-1">12</h3>
-                            <p className="text-xs text-slate-500 mt-1">Potential Partnerships</p>
-                        </div>
-                        <div className="glass-panel p-5 rounded-xl border-l-4 border-purple-500">
-                            <p className="text-slate-400 text-xs uppercase tracking-wider">Recurring Clients</p>
-                            <h3 className="text-2xl font-bold text-white mt-1">45</h3>
-                            <p className="text-xs text-slate-500 mt-1">Monthly Subscribers</p>
-                        </div>
-                        <div className="glass-panel p-5 rounded-xl border-l-4 border-orange-500">
-                            <p className="text-slate-400 text-xs uppercase tracking-wider">Ad Spend</p>
-                            <h3 className="text-2xl font-bold text-white mt-1">{formatPHP(adStats.spend || 12500)}</h3>
-                            <p className="text-xs text-slate-400 mt-1">FB & IG Ads</p>
-                        </div>
+        const DashboardView = ({ leads, invoices, adStats, setView }) => (
+            <div className="space-y-6 animate-fade-in">
+                <header className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+                    <div>
+                        <h2 className="text-2xl font-bold text-white">Agency Overview</h2>
+                        <p className="text-slate-400 text-sm">Web Development & Digital Services</p>
                     </div>
-
-                    {/* Charts */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="glass-panel p-6 rounded-xl">
-                            <h3 className="text-white font-bold mb-4">Bookings Velocity (30 Days)</h3>
-                            <ChartComponent data={[5, 8, 4, 12, 15, 10, 20, 22, 18, 25]} color="#10b981" />
+                    <button onClick={() => setView('leads')} className="bg-brand hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium shadow-lg shadow-blue-900/20 transition-all">
+                        <i className="fa-solid fa-plus mr-2"></i> Add Client
+                    </button>
+                </header>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {[
+                        { title: "Project Revenue", val: formatPHP(invoices.filter(i => i.status === 'Paid').reduce((a,b) => a + b.amount, 0)), sub: "YTD", color: "border-brand", text: "text-blue-400" },
+                        { title: "Potential Deals", val: leads.length, sub: "Qualified Leads", color: "border-cyan-500", text: "text-slate-500" },
+                        { title: "Active Retainers", val: "3", sub: "Recurring Maintenance", color: "border-purple-500", text: "text-slate-500" },
+                        { title: "Avg. Project Value", val: formatPHP(45000), sub: "Web Design", color: "border-orange-500", text: "text-slate-400" }
+                    ].map((kpi, i) => (
+                        <div key={i} className={`glass-panel p-5 rounded-xl border-l-4 ${kpi.color}`}>
+                            <p className="text-slate-400 text-xs uppercase tracking-wider">{kpi.title}</p>
+                            <h3 className="text-2xl font-bold text-white mt-1">{kpi.val}</h3>
+                            <p className={`text-xs mt-1 ${kpi.text}`}>{kpi.sub}</p>
                         </div>
-                        <div className="glass-panel p-6 rounded-xl">
-                            <h3 className="text-white font-bold mb-4">Revenue Trend</h3>
-                            <ChartComponent data={[20, 30, 25, 40, 60, 55, 70, 90]} color="#3b82f6" />
-                        </div>
+                    ))}
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="glass-panel p-6 rounded-xl">
+                        <h3 className="text-white font-bold mb-4">Pipeline Value (30 Days)</h3>
+                        <ChartComponent data={invoices.length > 0 ? invoices.map(i => i.amount / 1000) : [0,0,0]} color="#3b82f6" />
+                    </div>
+                    <div className="glass-panel p-6 rounded-xl">
+                        <h3 className="text-white font-bold mb-4">Cashflow Trend</h3>
+                        <ChartComponent data={invoices.length > 0 ? invoices.map(i => i.amount) : [0,0,0]} color="#06b6d4" />
                     </div>
                 </div>
-            );
+            </div>
+        );
 
-            const renderLeads = () => (
-                <div className="space-y-6 animate-fade-in">
-                    <header className="flex justify-between items-center">
-                        <h2 className="text-2xl font-bold text-white">Client & Partner Pipeline</h2>
-                        <div className="relative">
-                            <i className="fa-solid fa-search absolute left-3 top-3 text-slate-500"></i>
-                            <input type="text" placeholder="Search clients..." className="glass-input pl-10 pr-4 py-2 rounded-lg w-64" />
-                        </div>
-                    </header>
-                    <div className="glass-panel rounded-xl overflow-hidden">
-                        <table className="w-full text-left">
-                            <thead className="bg-slate-800/50 text-slate-400 text-xs uppercase">
-                                <tr>
-                                    <th className="p-4">Client / Partner</th>
-                                    <th className="p-4">Status</th>
-                                    <th className="p-4">Potential</th>
-                                    <th className="p-4 text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-700">
-                                {leads.map(lead => (
-                                    <tr key={lead.id} className="hover:bg-slate-800/50 transition-colors group">
-                                        <td className="p-4">
-                                            <div className="font-bold text-white">{lead.name}</div>
-                                            <div className="text-xs text-slate-500">{lead.contact} • {lead.email}</div>
-                                            {lead.notes && <div className="text-[10px] text-brand mt-1"><i className="fa-solid fa-note-sticky mr-1"></i>{lead.notes}</div>}
-                                        </td>
-                                        <td className="p-4">
-                                            <span onClick={() => handleMoveLead(lead.id)} className={`cursor-pointer px-2 py-1 rounded text-xs font-bold border ${
-                                                lead.status === 'New' ? 'border-blue-500/30 text-blue-400 bg-blue-500/10' :
-                                                lead.status === 'Contacted' ? 'border-yellow-500/30 text-yellow-400 bg-yellow-500/10' :
-                                                'border-green-500/30 text-green-400 bg-green-500/10'
-                                            }`}>
-                                                {lead.status}
-                                            </span>
-                                        </td>
-                                        <td className="p-4">
-                                            <div className="flex items-center">
-                                                <div className="w-full bg-slate-700 h-1.5 rounded-full mr-2 w-16">
-                                                    <div className="bg-brand h-full rounded-full" style={{width: `${lead.score}%`}}></div>
-                                                </div>
-                                                <span className="text-xs text-slate-400">{lead.score}</span>
-                                            </div>
-                                        </td>
-                                        <td className="p-4 text-right space-x-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button 
-                                                onClick={() => setModal({ open: true, type: 'email', data: { to: lead.email, subject: '', body: '', leadId: lead.id } })}
-                                                className="bg-slate-700 hover:bg-slate-600 text-white p-2 rounded text-xs" title="Send Message">
-                                                <i className="fa-solid fa-comment-dots"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            );
+        const ProjectsView = ({ tasks, setTasks, notify }) => {
+            const [draggedItem, setDraggedItem] = useState(null);
+            const handleDragStart = (e, id) => { setDraggedItem(id); e.dataTransfer.effectAllowed = "move"; };
+            const handleDragOver = (e) => { e.preventDefault(); e.currentTarget.classList.add('drag-over'); };
+            const handleDragLeave = (e) => { e.currentTarget.classList.remove('drag-over'); };
+            const handleDrop = (e, status) => { e.preventDefault(); e.currentTarget.classList.remove('drag-over'); setTasks(prev => prev.map(t => t.id === draggedItem ? { ...t, status } : t)); setDraggedItem(null); };
+            const deleteTask = (id) => { if(confirm("Delete task?")) { setTasks(prev => prev.filter(t => t.id !== id)); notify("Task deleted"); } };
 
-            const renderInbox = () => (
-                <div className="flex h-[calc(100vh-140px)] gap-4 animate-fade-in">
-                    <div className="w-1/3 glass-panel rounded-xl flex flex-col overflow-hidden">
-                        <div className="p-4 border-b border-slate-700 bg-slate-800/30">
-                            <h3 className="font-bold text-white">Unified Inbox</h3>
-                            <div className="flex gap-2 mt-2">
-                                <span className="bg-brand text-xs px-2 py-1 rounded text-white">All</span>
-                                <span className="text-slate-400 text-xs px-2 py-1 hover:text-white cursor-pointer">Unread</span>
-                            </div>
-                        </div>
-                        <div className="flex-1 overflow-y-auto">
-                            {messages.map(msg => (
-                                <div key={msg.id} className={`p-4 border-b border-slate-700 cursor-pointer hover:bg-slate-800/50 ${msg.unread ? 'bg-slate-800/30 border-l-2 border-l-brand' : ''}`}>
-                                    <div className="flex justify-between mb-1">
-                                        <span className="font-bold text-sm text-white">{msg.sender}</span>
-                                        <span className="text-xs text-slate-500">{msg.time}</span>
-                                    </div>
-                                    <p className="text-xs text-slate-400 truncate">{msg.preview}</p>
-                                    <div className="mt-2 text-xs text-slate-500 uppercase flex items-center gap-1">
-                                        <i className={`fa-brands ${
-                                            msg.platform === 'messenger' ? 'fa-facebook-messenger text-blue-400' : 
-                                            msg.platform === 'email' ? 'fa-google text-red-400' : 'fa-whatsapp text-green-400'
-                                        }`}></i> {msg.platform}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                    <div className="flex-1 glass-panel rounded-xl flex flex-col">
-                        <div className="flex-1 p-8 flex items-center justify-center text-slate-500">
-                            <div className="text-center">
-                                <i className="fa-solid fa-comments text-4xl mb-4 opacity-50"></i>
-                                <p>Select a conversation to start chatting</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
-
-            const renderCalendar = () => (
-                <div className="h-[calc(100vh-140px)] glass-panel rounded-xl p-6 animate-fade-in flex flex-col">
-                    <header className="flex justify-between items-center mb-6">
-                        <h2 className="text-2xl font-bold text-white">Therapist Schedule</h2>
-                        <button className="bg-slate-700 px-4 py-2 rounded-lg text-sm hover:bg-slate-600">Sync Google Calendar</button>
-                    </header>
-                    <div className="flex-1 bg-white rounded-lg flex items-center justify-center text-slate-900 relative overflow-hidden">
-                        <div className="absolute inset-0 bg-slate-100 flex flex-col">
-                            <div className="flex border-b border-gray-200 p-4">
-                                <div className="w-32 border-r border-gray-200 pr-4">
-                                    <div className="text-2xl font-bold">Dec 2025</div>
-                                </div>
-                                <div className="flex-1 grid grid-cols-7 gap-1 text-center font-bold text-gray-500">
-                                    <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
-                                </div>
-                            </div>
-                            <div className="flex-1 grid grid-cols-7 grid-rows-5 gap-px bg-gray-200">
-                                {[...Array(35)].map((_, i) => (
-                                    <div key={i} className="bg-white p-2 relative hover:bg-blue-50 cursor-pointer">
-                                        <span className="text-xs text-gray-400">{i + 1}</span>
-                                        {i === 12 && <div className="mt-2 bg-purple-100 text-purple-800 text-xs p-1 rounded truncate">6pm: Maria (2pax)</div>}
-                                        {i === 15 && <div className="mt-2 bg-green-100 text-green-800 text-xs p-1 rounded truncate">2pm: TechHub Office</div>}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
-
-            const renderInvoices = () => (
-                <div className="space-y-6 animate-fade-in">
-                    <header className="flex justify-between items-center">
-                        <h2 className="text-2xl font-bold text-white">Invoicing & Payments</h2>
-                        <button onClick={() => setModal({ open: true, type: 'invoice' })} className="bg-brand hover:bg-green-600 text-white px-4 py-2 rounded-lg font-medium">
-                            <i className="fa-solid fa-file-invoice-dollar mr-2"></i> Create Payment Link
-                        </button>
-                    </header>
-                    <div className="grid grid-cols-3 gap-6">
-                        {invoices.map(inv => (
-                            <div key={inv.id} className="glass-panel p-6 rounded-xl flex flex-col justify-between h-48 border-t-4 border-slate-600 hover:border-brand transition-all">
-                                <div>
-                                    <div className="flex justify-between items-start">
-                                        <h3 className="font-bold text-white text-lg">{inv.client}</h3>
-                                        <span className={`px-2 py-1 rounded text-xs font-bold ${inv.status === 'Paid' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
-                                            {inv.status}
-                                        </span>
-                                    </div>
-                                    <p className="text-slate-400 text-sm mt-1">{inv.desc}</p>
-                                    <p className="text-slate-500 text-xs mt-4">{inv.date}</p>
-                                </div>
-                                <div className="flex justify-between items-end">
-                                    <span className="text-2xl font-bold text-white">{formatPHP(inv.amount)}</span>
-                                    <button className="text-slate-400 hover:text-white"><i className="fa-solid fa-download"></i> PDF</button>
+            return (
+                <div className="space-y-6 animate-fade-in h-full flex flex-col">
+                    <header className="flex justify-between items-center"><h2 className="text-2xl font-bold text-white">Dev & Design Board</h2><button onClick={() => { const title = prompt("Task Name:"); if(title) setTasks([...tasks, { id: Date.now(), title, client: "General", status: "Backlog", priority: "Medium", assignee: "Me" }]); }} className="bg-brand text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-600"><i className="fa-solid fa-plus mr-2"></i> New Ticket</button></header>
+                    <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 overflow-hidden">
+                        {['Backlog', 'In Progress', 'Done'].map(status => (
+                            <div key={status} className="glass-panel rounded-xl flex flex-col h-full droppable-area" onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={(e) => handleDrop(e, status)}>
+                                <div className="p-4 border-b border-slate-700 font-bold text-white uppercase text-xs tracking-wider flex justify-between">{status} <span className="bg-slate-700 text-white px-2 rounded-full">{tasks.filter(t => t.status === status).length}</span></div>
+                                <div className="p-4 flex-1 overflow-y-auto space-y-3 custom-scrollbar">
+                                    {tasks.filter(t => t.status === status).map(task => (
+                                        <div key={task.id} draggable onDragStart={(e) => handleDragStart(e, task.id)} className="task-card bg-slate-800 p-4 rounded-lg border border-slate-700 hover:border-brand relative group">
+                                            <button onClick={(e)=>{e.stopPropagation(); deleteTask(task.id)}} className="absolute top-2 right-2 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"><i className="fa-solid fa-trash"></i></button>
+                                            <div className="flex justify-between items-start mb-2 pr-4"><span className={`text-[10px] px-2 py-0.5 rounded ${task.priority === 'High' ? 'bg-red-500/20 text-red-400' : 'bg-slate-700 text-slate-400'}`}>{task.priority}</span><span className="text-[10px] text-slate-500">{task.client}</span></div>
+                                            <h4 className="text-sm font-medium text-slate-200">{task.title}</h4>
+                                            <div className="mt-3 flex items-center justify-between"><div className="w-6 h-6 rounded-full bg-slate-600 flex items-center justify-center text-[10px] text-white">{task.assignee[0]}</div><i className="fa-solid fa-grip-lines text-slate-600 cursor-grab"></i></div>
+                                        </div>
+                                    ))}
+                                    {tasks.filter(t => t.status === status).length === 0 && <div className="text-center py-10 text-slate-600 text-xs border-2 border-dashed border-slate-700 rounded-lg">Drop items here</div>}
                                 </div>
                             </div>
                         ))}
                     </div>
                 </div>
             );
+        };
 
-            const renderProjects = () => {
-                const moveTask = (id, newStatus) => {
-                    setTasks(tasks.map(t => t.id === id ? { ...t, status: newStatus } : t));
-                };
-
-                return (
-                    <div className="space-y-6 animate-fade-in h-full flex flex-col">
-                        <header className="flex justify-between items-center">
-                            <h2 className="text-2xl font-bold text-white">Operations Center</h2>
-                            <button onClick={() => {
-                                const title = prompt("Task Name:");
-                                if(title) setTasks([...tasks, { id: Date.now(), title, client: "General", status: "Backlog", priority: "Medium", assignee: "Me" }]);
-                            }} className="bg-brand text-white px-4 py-2 rounded-lg text-sm hover:bg-green-600">
-                                <i className="fa-solid fa-plus mr-2"></i> New Task
-                            </button>
-                        </header>
-                        <div className="flex-1 grid grid-cols-3 gap-4 overflow-hidden">
-                            {['Backlog', 'In Progress', 'Done'].map(status => (
-                                <div key={status} className="glass-panel rounded-xl flex flex-col h-full">
-                                    <div className={`p-4 border-b border-slate-700 font-bold text-white ${status === 'Done' ? 'border-b-green-500' : ''}`}>
-                                        {status} <span className="text-slate-500 text-xs ml-2">{tasks.filter(t => t.status === status).length}</span>
-                                    </div>
-                                    <div className="p-4 flex-1 overflow-y-auto space-y-3 custom-scrollbar">
-                                        {tasks.filter(t => t.status === status).map(task => (
-                                            <div key={task.id} className="bg-slate-800 p-4 rounded-lg border border-slate-700 hover:border-brand cursor-pointer group relative">
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <span className={`text-[10px] px-2 py-0.5 rounded ${task.priority === 'High' ? 'bg-red-500/20 text-red-400' : 'bg-slate-700 text-slate-400'}`}>{task.priority}</span>
-                                                    <span className="text-[10px] text-slate-500">{task.client}</span>
-                                                </div>
-                                                <h4 className="text-sm font-medium text-slate-200">{task.title}</h4>
-                                                <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                                                    {status !== 'Backlog' && <button onClick={()=>moveTask(task.id, 'Backlog')} className="w-6 h-6 rounded bg-slate-700 hover:bg-slate-600 text-xs text-white"><i className="fa-solid fa-arrow-left"></i></button>}
-                                                    {status !== 'In Progress' && <button onClick={()=>moveTask(task.id, 'In Progress')} className="w-6 h-6 rounded bg-blue-600 hover:bg-blue-500 text-xs text-white"><i className="fa-solid fa-play"></i></button>}
-                                                    {status !== 'Done' && <button onClick={()=>moveTask(task.id, 'Done')} className="w-6 h-6 rounded bg-green-600 hover:bg-green-500 text-xs text-white"><i className="fa-solid fa-check"></i></button>}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                );
-            };
-
-            const renderReports = () => {
-                const generateReport = async () => {
-                    if(!reportClient) return notify("Select a client/partner", "error");
-                    setIsReportGenerating(true);
-                    
-                    const prompt = `Write a professional email/report for "${reportClient}". 
-                    Context: AHMAS (At Home Massage and Spa) services. 
-                    Data: They are a potential corporate partner or a VIP client.
-                    Goal: Propose a monthly wellness package or summarize last month's sessions.
-                    Tone: Relaxing, professional, persuasive.`;
-                    
-                    try {
-                        const text = await APIService.generateContent(prompt);
-                        setGeneratedReport(text);
-                    } catch(e) { notify("AI Error: " + e.message, 'error'); }
-                    setIsReportGenerating(false);
-                };
-
-                return (
-                    <div className="space-y-6 animate-fade-in max-w-4xl mx-auto">
-                        <header>
-                            <h2 className="text-2xl font-bold text-white">AI Content Generator</h2>
-                            <p className="text-slate-400">Create proposals for Corporate Partners or VIP Clients.</p>
-                        </header>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="glass-panel p-6 rounded-xl space-y-4 h-fit">
-                                <h3 className="font-bold text-white border-b border-slate-700 pb-2">Input</h3>
-                                <div>
-                                    <label className="text-xs text-slate-400 block mb-1">Target Audience</label>
-                                    <select className="w-full glass-input p-2 rounded" value={reportClient} onChange={e=>setReportClient(e.target.value)}>
-                                        <option value="">Select...</option>
-                                        <option value="Corporate HR (TechHub)">Corporate HR (TechHub)</option>
-                                        <option value="Condo Admin (Azure)">Condo Admin (Azure)</option>
-                                        <option value="VIP Client (Maria)">VIP Client (Maria)</option>
-                                    </select>
-                                </div>
-                                <button onClick={generateReport} disabled={isReportGenerating} className="w-full bg-brand text-white py-2 rounded font-bold hover:bg-green-600 disabled:opacity-50">
-                                    {isReportGenerating ? <i className="fa-solid fa-circle-notch fa-spin"></i> : 'Generate Proposal'}
-                                </button>
-                            </div>
-
-                            <div className="md:col-span-2 glass-panel p-6 rounded-xl min-h-[400px] flex flex-col">
-                                <h3 className="font-bold text-white border-b border-slate-700 pb-2 flex justify-between">
-                                    <span>AI Draft</span>
-                                    {generatedReport && <button onClick={()=>{navigator.clipboard.writeText(generatedReport); notify("Copied")}} className="text-xs text-brand hover:underline">Copy Text</button>}
-                                </h3>
-                                <textarea 
-                                    className="flex-1 bg-transparent text-slate-300 mt-4 resize-none focus:outline-none font-mono text-sm leading-relaxed" 
-                                    placeholder="AI generated content will appear here..."
-                                    value={generatedReport}
-                                    readOnly
-                                ></textarea>
-                            </div>
-                        </div>
-                    </div>
-                );
-            };
-
-            const renderGrowth = () => {
-                const handleCompAnalysis = async () => {
-                    if (!growthTopic) return notify("Please enter a competitor name", "error");
-                    setIsGrowthLoading(true);
-                    
-                    const prompt = `Conduct a deep-dive analysis for the spa competitor: '${growthTopic}' in the Philippines.
-                    Return ONLY valid JSON (no markdown) with this structure:
-                    {
-                        "swot": {
-                            "strengths": ["point1", "point2"],
-                            "weaknesses": ["point1", "point2"],
-                            "opportunities": ["point1", "point2"],
-                            "threats": ["point1", "point2"]
-                        },
-                        "pricing": [
-                            {"service": "Signature Massage (1hr)", "competitor": "700", "ahmas": "600", "diff": "-100"},
-                            {"service": "Body Scrub", "competitor": "1200", "ahmas": "1000", "diff": "-200"}
-                        ],
-                        "sentiment": {
-                            "positive": ["Ambiance", "Therapist Skill"],
-                            "negative": ["Booking Delays", "Noise Levels"]
-                        },
-                        "strategy": "They focus heavily on mall-based foot traffic.",
-                        "confidence_score": 85,
-                        "data_sources": "Based on public Facebook reviews, website pricing, and Agoda listings."
-                    }`;
-
-                    try {
-                        let text = await APIService.generateContent(prompt);
-                        text = text.replace(/```json/g, '').replace(/```/g, '');
-                        const result = JSON.parse(text);
-                        setCompAnalysis(result);
-                        notify("Analysis Complete");
-                    } catch (e) {
-                        notify("AI Error: " + e.message, "error");
-                        // Mock fallback for demo
-                        setCompAnalysis({
-                            swot: {
-                                strengths: ["Strong Brand", "Mall Locations"],
-                                weaknesses: ["High Price", "Hard to Book"],
-                                opportunities: ["Home Service", "Corp Packages"],
-                                threats: ["New Entrants", "Economic Downturn"]
-                            },
-                            pricing: [
-                                {service: "Signature Massage", competitor: "850", ahmas: "600", diff: "-250"},
-                                {service: "Body Scrub", competitor: "1500", ahmas: "1200", diff: "-300"}
-                            ],
-                            sentiment: {
-                                positive: ["Cleanliness", "Oils"],
-                                negative: ["Late Therapists", "Hidden Fees"]
-                            },
-                            strategy: "They rely on mall foot traffic.",
-                            confidence_score: 45,
-                            data_sources: "Estimated based on general industry trends."
-                        });
-                    }
-                    setIsGrowthLoading(false);
-                };
-
-                return (
-                    <div className="space-y-6 animate-fade-in max-w-6xl mx-auto">
-                        <header>
-                            <h2 className="text-2xl font-bold text-white">Competitor Intelligence Center</h2>
-                            <p className="text-slate-400">Deep-dive analysis on pricing, sentiment, and strategy.</p>
-                        </header>
-
-                        {/* Input Section */}
-                        <div className="glass-panel p-6 rounded-xl border-t-4 border-brand">
-                            <div className="flex flex-col md:flex-row gap-4 items-end">
-                                <div className="flex-1 w-full">
-                                    <label className="text-xs text-slate-400 block mb-2 font-bold">COMPETITOR NAME</label>
-                                    <div className="relative">
-                                        <i className="fa-solid fa-magnifying-glass-chart absolute left-3 top-3 text-slate-500"></i>
-                                        <input 
-                                            value={growthTopic} 
-                                            onChange={e=>setGrowthTopic(e.target.value)} 
-                                            className="w-full glass-input pl-10 pr-4 py-3 rounded-lg" 
-                                            placeholder="e.g. 'Nuat Thai', 'The Spa'" 
-                                        />
-                                    </div>
-                                </div>
-                                <button 
-                                    onClick={handleCompAnalysis} 
-                                    disabled={isGrowthLoading}
-                                    className="bg-brand hover:bg-green-600 text-white px-8 py-3 rounded-lg font-bold transition-all shadow-lg min-w-[160px]"
-                                >
-                                    {isGrowthLoading ? <i className="fa-solid fa-circle-notch fa-spin"></i> : 'Run Intelligence'}
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Analysis Result */}
-                        {compAnalysis && (
-                            <div className="animate-fade-in space-y-6">
-                                {/* Reliability Header */}
-                                <div className="flex items-center justify-between bg-slate-800/50 p-4 rounded-xl border border-slate-700">
-                                    <div className="flex items-center gap-4">
-                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg ${compAnalysis.confidence_score >= 80 ? 'bg-green-500 text-white' : compAnalysis.confidence_score >= 50 ? 'bg-yellow-500 text-black' : 'bg-red-500 text-white'}`}>
-                                            {compAnalysis.confidence_score}%
-                                        </div>
-                                        <div>
-                                            <h4 className="text-white font-bold">Confidence Score</h4>
-                                            <p className="text-xs text-slate-400">{compAnalysis.data_sources}</p>
-                                        </div>
-                                    </div>
-                                    <a 
-                                        href={`https://www.google.com/search?q=${encodeURIComponent(growthTopic + ' reviews philippines')}`} 
-                                        target="_blank" 
-                                        className="text-xs bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg border border-slate-500 transition-colors"
-                                    >
-                                        <i className="fa-brands fa-google mr-2"></i> Verify Data
-                                    </a>
-                                </div>
-
-                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                    {/* Left Col: Pricing & Strategy */}
-                                    <div className="space-y-6">
-                                        <div className="glass-panel p-5 rounded-xl">
-                                            <h4 className="font-bold text-white mb-4 border-b border-slate-700 pb-2"><i className="fa-solid fa-tags mr-2 text-yellow-400"></i> Pricing Radar</h4>
-                                            <div className="space-y-3">
-                                                {compAnalysis.pricing?.map((p, i) => (
-                                                    <div key={i} className="flex justify-between items-center text-sm">
-                                                        <span className="text-slate-300">{p.service}</span>
-                                                        <div className="text-right">
-                                                            <div className="text-red-400">₱{p.competitor}</div>
-                                                            <div className="text-[10px] text-green-400">You: ₱{p.ahmas} ({p.diff})</div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="glass-panel p-5 rounded-xl">
-                                            <h4 className="font-bold text-white mb-4 border-b border-slate-700 pb-2"><i className="fa-solid fa-chess mr-2 text-blue-400"></i> Their Strategy</h4>
-                                            <p className="text-sm text-slate-300 leading-relaxed">{compAnalysis.strategy}</p>
-                                        </div>
-
-                                        <div className="glass-panel p-5 rounded-xl">
-                                            <h4 className="font-bold text-white mb-4 border-b border-slate-700 pb-2"><i className="fa-solid fa-heart-crack mr-2 text-pink-400"></i> Sentiment</h4>
-                                            <div className="space-y-4">
-                                                <div>
-                                                    <p className="text-xs text-green-400 mb-1">👍 What they do well</p>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {compAnalysis.sentiment.positive.map((s,i)=><span key={i} className="bg-green-500/20 text-green-300 text-[10px] px-2 py-1 rounded">{s}</span>)}
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs text-red-400 mb-1">👎 What people hate</p>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {compAnalysis.sentiment.negative.map((s,i)=><span key={i} className="bg-red-500/20 text-red-300 text-[10px] px-2 py-1 rounded">{s}</span>)}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Right Col: SWOT Matrix */}
-                                    <div className="lg:col-span-2 grid grid-cols-2 gap-4 h-fit">
-                                        <div className="glass-panel p-5 rounded-xl border-t-4 border-green-500">
-                                            <h4 className="font-bold text-green-400 mb-2">STRENGTHS</h4>
-                                            <ul className="text-sm text-slate-300 list-disc pl-4 space-y-1">{compAnalysis.swot.strengths.map((s,i)=><li key={i}>{s}</li>)}</ul>
-                                        </div>
-                                        <div className="glass-panel p-5 rounded-xl border-t-4 border-red-500">
-                                            <h4 className="font-bold text-red-400 mb-2">WEAKNESSES</h4>
-                                            <ul className="text-sm text-slate-300 list-disc pl-4 space-y-1">{compAnalysis.swot.weaknesses.map((s,i)=><li key={i}>{s}</li>)}</ul>
-                                        </div>
-                                        <div className="glass-panel p-5 rounded-xl border-t-4 border-blue-500">
-                                            <h4 className="font-bold text-blue-400 mb-2">OPPORTUNITIES</h4>
-                                            <ul className="text-sm text-slate-300 list-disc pl-4 space-y-1">{compAnalysis.swot.opportunities.map((s,i)=><li key={i}>{s}</li>)}</ul>
-                                        </div>
-                                        <div className="glass-panel p-5 rounded-xl border-t-4 border-yellow-500">
-                                            <h4 className="font-bold text-yellow-400 mb-2">THREATS</h4>
-                                            <ul className="text-sm text-slate-300 list-disc pl-4 space-y-1">{compAnalysis.swot.threats.map((s,i)=><li key={i}>{s}</li>)}</ul>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                );
-            };
-            
-            const renderSettings = () => (
-                <div className="max-w-2xl mx-auto animate-fade-in">
-                    <h2 className="text-2xl font-bold text-white mb-6">System Settings</h2>
-                    <div className="glass-panel p-8 rounded-xl space-y-6">
-                        <div className="border-b border-slate-700 pb-4 mb-4">
-                            <h3 className="text-lg font-semibold text-white">API Configuration</h3>
-                            <p className="text-sm text-slate-400">Connect your tools to power the OS.</p>
-                        </div>
-                        
-                        <div className="bg-gradient-to-r from-emerald-900/50 to-teal-900/50 p-4 rounded-lg border border-emerald-500/30">
-                            <label className="block text-sm font-bold text-emerald-300 mb-2">
-                                <i className="fa-solid fa-wand-magic-sparkles mr-2"></i>Google Gemini API Key
-                            </label>
-                            <input 
-                                type="password" 
-                                className="w-full glass-input px-4 py-3 rounded-lg border-emerald-500/50 focus:border-emerald-400"
-                                placeholder="AIza..."
-                                value={settings.gemini || ''}
-                                onChange={(e) => setSettings({...settings, gemini: e.target.value})}
-                            />
-                            <p className="text-xs text-emerald-300/70 mt-1">Required for generating Proposals and Emails.</p>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">Apollo.io API Key</label>
-                            <input 
-                                type="password" 
-                                className="w-full glass-input px-4 py-3 rounded-lg"
-                                placeholder="api_..."
-                                value={settings.apollo || ''}
-                                onChange={(e) => setSettings({...settings, apollo: e.target.value})}
-                            />
-                            <p className="text-xs text-slate-500 mt-1">Use this to find HR Managers for corporate partnerships.</p>
-                        </div>
-
-                        <div className="pt-4 flex justify-end">
-                            <button 
-                                onClick={saveSettings}
-                                className="bg-brand hover:bg-green-700 text-white px-6 py-2 rounded-lg font-bold transition-colors shadow-lg"
-                            >
-                                Save Configuration
-                            </button>
+        const CalendarView = () => {
+            const handleDateClick = (i) => { const day = i + 1; const status = prompt(`Manage Schedule for Dec ${day}:\nType 'Meeting' or 'Deadline'`); if (status) alert(`Schedule updated: ${status}`); };
+            return (
+                <div className="h-[calc(100vh-140px)] glass-panel rounded-xl p-6 animate-fade-in flex flex-col">
+                    <header className="flex justify-between items-center mb-6"><h2 className="text-2xl font-bold text-white">Project Timeline</h2><div className="space-x-2"><button className="bg-slate-700 px-4 py-2 rounded-lg text-sm hover:bg-slate-600">Sync Google Cal</button><button className="bg-brand px-4 py-2 rounded-lg text-sm hover:bg-blue-600 text-white"><i className="fa-solid fa-link mr-2"></i> Book Call</button></div></header>
+                    <div className="flex-1 bg-white rounded-lg flex items-center justify-center text-slate-900 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-slate-50 flex flex-col">
+                            <div className="flex border-b border-gray-200 p-4 bg-white"><div className="w-32 border-r border-gray-200 pr-4"><div className="text-2xl font-bold text-slate-800">Dec 2025</div></div><div className="flex-1 grid grid-cols-7 gap-1 text-center font-bold text-slate-500 uppercase text-xs tracking-wider"><div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div></div></div>
+                            <div className="flex-1 grid grid-cols-7 grid-rows-5 gap-px bg-gray-200 border-l border-gray-200">{[...Array(35)].map((_, i) => (<div key={i} onClick={() => handleDateClick(i)} className="bg-white p-2 relative hover:bg-blue-50 cursor-pointer transition-colors group"><span className="text-xs text-slate-400 group-hover:text-slate-800 font-medium">{i + 1}</span><div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none"><i className="fa-solid fa-plus text-blue-300"></i></div></div>))}</div>
                         </div>
                     </div>
                 </div>
             );
+        };
 
-            // --- MAIN RENDER ---
-
+        const GrowthView = ({ notify }) => {
+            const [topic, setTopic] = useState('');
+            const [analysis, setAnalysis] = useState(null);
+            const [loading, setLoading] = useState(false);
+            const runAnalysis = async () => {
+                if(!topic) return notify("Enter competitor name", "error");
+                setLoading(true);
+                try {
+                    let text = await APIService.generateContent(`Conduct analysis for web dev agency competitor '${topic}' in Philippines. JSON format: swot(obj), pricing(arr), sentiment(obj), strategy(str), confidence_score(num), data_sources(str).`);
+                    text = text.replace(/```json/g, '').replace(/```/g, '');
+                    setAnalysis(JSON.parse(text));
+                    notify("Analysis Complete");
+                } catch(e) { notify("Analysis failed (Check API Key)", "error"); }
+                setLoading(false);
+            };
             return (
-                <div className="flex h-screen overflow-hidden text-sm">
-                    {/* Navigation Sidebar */}
-                    <aside className="w-64 bg-slate-950 border-r border-slate-800 flex flex-col z-10">
-                        <div className="p-6">
-                            <h1 className="text-xl font-bold text-white flex items-center">
-                                <i className="fa-solid fa-spa mr-2 text-brand"></i>
-                                <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#10b981] to-emerald-400">AHMAS</span>
-                                <span className="ml-1 text-slate-400 font-light">OS</span>
-                            </h1>
-                        </div>
-                        <nav className="flex-1 px-4 space-y-1 mt-4 overflow-y-auto custom-scrollbar">
-                            {[
-                                { id: 'dashboard', icon: 'fa-chart-pie', label: 'Overview' },
-                                { id: 'leads', icon: 'fa-user-group', label: 'Clients & Partners' },
-                                { id: 'calendar', icon: 'fa-calendar-days', label: 'Bookings' },
-                                { id: 'inbox', icon: 'fa-inbox', label: 'Inbox' },
-                                { id: 'growth', icon: 'fa-chess-knight', label: 'Comp. Intelligence' }, // Updated Icon
-                                { id: 'reports', icon: 'fa-pen-nib', label: 'AI Proposals' },
-                                { id: 'projects', icon: 'fa-list-check', label: 'Operations' },
-                                { id: 'invoices', icon: 'fa-file-invoice-dollar', label: 'Invoices' },
-                                { id: 'settings', icon: 'fa-sliders', label: 'Settings' }
-                            ].map(item => (
-                                <button key={item.id} onClick={() => setView(item.id)}
-                                    className={`w-full text-left px-4 py-3 rounded-lg flex items-center transition-all ${view === item.id ? 'bg-brand text-white shadow-lg shadow-green-900/40' : 'text-slate-400 hover:bg-slate-900 hover:text-white'}`}>
-                                    <i className={`fa-solid ${item.icon} w-5 text-center mr-3`}></i> {item.label}
-                                </button>
-                            ))}
-                        </nav>
-                        <div className="p-4 border-t border-slate-800">
-                            <div className="flex items-center space-x-3 bg-slate-900 p-2 rounded-lg">
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-brand to-emerald-300 flex items-center justify-center text-xs font-bold text-white">AD</div>
-                                <div>
-                                    <p className="text-xs font-medium text-white">Admin User</p>
-                                    <p className="text-[10px] text-green-400">● Online</p>
+                <div className="space-y-6 animate-fade-in max-w-6xl mx-auto">
+                    <header><h2 className="text-2xl font-bold text-white">Agency Intelligence</h2><p className="text-slate-400">Deep-dive analysis on pricing, tech stack, and strategy.</p></header>
+                    <div className="glass-panel p-6 rounded-xl border-t-4 border-brand"><div className="flex flex-col md:flex-row gap-4 items-end"><div className="flex-1 w-full"><label className="text-xs text-slate-400 block mb-2 font-bold">COMPETITOR AGENCY</label><input value={topic} onChange={e=>setTopic(e.target.value)} className="w-full glass-input px-4 py-3 rounded-lg" placeholder="e.g. 'Symphony Digital'" /></div><button onClick={runAnalysis} disabled={loading} className="bg-brand hover:bg-blue-600 text-white px-8 py-3 rounded-lg font-bold min-w-[160px]">{loading ? '...' : 'Analyze'}</button></div></div>
+                    {analysis && (<div className="animate-fade-in space-y-6"><div className="flex items-center justify-between bg-slate-800/50 p-4 rounded-xl border border-slate-700"><div className="flex items-center gap-4"><div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg ${analysis.confidence_score >= 80 ? 'bg-green-500 text-white' : 'bg-yellow-500 text-black'}`}>{analysis.confidence_score}%</div><div><h4 className="text-white font-bold">Confidence</h4><p className="text-xs text-slate-400">{analysis.data_sources}</p></div></div><a href={`https://www.google.com/search?q=${encodeURIComponent(topic + ' reviews philippines')}`} target="_blank" className="text-xs bg-slate-700 px-4 py-2 rounded-lg text-white hover:bg-slate-600">Verify</a></div><div className="grid grid-cols-1 lg:grid-cols-2 gap-6"><div className="glass-panel p-5 rounded-xl border-t-4 border-yellow-400"><h4 className="font-bold text-white mb-4">Pricing Radar</h4>{analysis.pricing?.map((p, i) => (<div key={i} className="flex justify-between border-b border-slate-700 pb-2 mb-2"><span className="text-slate-300">{p.service}</span><span className="text-red-400">₱{p.competitor}</span></div>))}</div><div className="glass-panel p-5 rounded-xl border-t-4 border-blue-500"><h4 className="font-bold text-white mb-4">SWOT</h4><div className="grid grid-cols-2 gap-4"><div><p className="text-green-400 text-xs font-bold">STRENGTHS</p><ul className="text-xs text-slate-300 list-disc pl-4">{analysis.swot?.strengths?.map((s,i)=><li key={i}>{s}</li>)}</ul></div><div><p className="text-red-400 text-xs font-bold">WEAKNESSES</p><ul className="text-xs text-slate-300 list-disc pl-4">{analysis.swot?.weaknesses?.map((s,i)=><li key={i}>{s}</li>)}</ul></div></div></div></div></div>)}
+                </div>
+            );
+        };
+
+        const LeadsView = ({ leads, handleFindLeads, loading, handleMoveLead, deleteLead, setModal }) => {
+            const [term, setTerm] = useState('');
+            return (
+                <div className="space-y-6 animate-fade-in">
+                    <header className="flex justify-between items-center"><h2 className="text-2xl font-bold text-white">Client Pipeline</h2><div className="flex gap-2"><input value={term} onChange={e=>setTerm(e.target.value)} placeholder="Search..." className="glass-input px-3 py-1 rounded" /><button onClick={()=>handleFindLeads(term)} disabled={loading} className="bg-brand text-white px-4 py-2 rounded-lg text-sm">{loading?'...':'Find'}</button></div></header>
+                    <div className="glass-panel rounded-xl overflow-hidden"><table className="w-full text-left"><thead className="bg-slate-800/50 text-slate-400 text-xs uppercase"><tr><th className="p-4">Name</th><th className="p-4">Status</th><th className="p-4 text-right">Actions</th></tr></thead><tbody className="divide-y divide-slate-700">{leads.length===0?<tr><td colSpan="3" className="p-8 text-center text-slate-500">No leads found. Use search to add.</td></tr>:leads.map(lead=>(<tr key={lead.id} className="hover:bg-slate-800/50 transition-colors"><td className="p-4"><div className="font-bold text-white">{lead.name}</div><div className="text-xs text-slate-500">{lead.email}</div></td><td className="p-4"><span onClick={()=>handleMoveLead(lead.id)} className="cursor-pointer bg-slate-700 px-2 py-1 rounded text-xs text-white">{lead.status}</span></td><td className="p-4 text-right space-x-2"><button onClick={()=>setModal({open:true, type:'email', data:{to:lead.email}})} className="text-slate-400 hover:text-white"><i className="fa-solid fa-envelope"></i></button><button onClick={()=>deleteLead(lead.id)} className="text-slate-400 hover:text-red-400"><i className="fa-solid fa-trash"></i></button></td></tr>))}</tbody></table></div>
+                </div>
+            );
+        };
+
+        const InvoicesView = ({ invoices, setModal, deleteInvoice }) => (
+            <div className="space-y-6 animate-fade-in">
+                <header className="flex justify-between items-center"><h2 className="text-2xl font-bold text-white">Invoicing</h2><button onClick={()=>setModal({open:true, type:'invoice'})} className="bg-brand hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium">Create Invoice</button></header>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">{invoices.length===0?<div className="col-span-3 text-center text-slate-500 py-10">No invoices generated yet.</div>:invoices.map(inv=>(<div key={inv.id} className="glass-panel p-6 rounded-xl flex flex-col justify-between h-48 border-t-4 border-slate-600 hover:border-brand transition-all relative group"><button onClick={()=>deleteInvoice(inv.id)} className="absolute top-4 right-4 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100"><i className="fa-solid fa-trash"></i></button><div><h3 className="font-bold text-white text-lg">{inv.client}</h3><p className="text-slate-400 text-sm mt-1">{inv.desc}</p><p className="text-slate-500 text-xs mt-4">{inv.date}</p></div><div className="flex justify-between items-end"><span className="text-2xl font-bold text-white">{formatPHP(inv.amount)}</span></div></div>))}</div>
+            </div>
+        );
+
+        const InboxView = ({ inbox, deleteMessage }) => (
+            <div className="flex h-[calc(100vh-140px)] gap-4 animate-fade-in">
+                <div className="w-1/3 glass-panel rounded-xl flex flex-col overflow-hidden"><div className="p-4 border-b border-slate-700 bg-slate-800/30"><h3 className="font-bold text-white">Inbox</h3></div><div className="flex-1 overflow-y-auto">{inbox.length===0?<div className="p-8 text-center text-slate-500">No messages.</div>:inbox.map(msg=>(<div key={msg.id} className="p-4 border-b border-slate-700 cursor-pointer hover:bg-slate-800/50 flex justify-between group"><div><div className="font-bold text-sm text-white">{msg.sender}</div><p className="text-xs text-slate-400 truncate">{msg.preview}</p></div><button onClick={(e)=>{e.stopPropagation(); deleteMessage(msg.id)}} className="text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100"><i className="fa-solid fa-trash"></i></button></div>))}</div></div>
+                <div className="flex-1 glass-panel rounded-xl flex flex-col items-center justify-center text-slate-500"><i className="fa-solid fa-comments text-4xl mb-4 opacity-50"></i><p>Select a message</p></div>
+            </div>
+        );
+
+        const ReportsView = ({ notify, leads }) => {
+            const [reportClient, setReportClient] = useState('');
+            const [generatedReport, setGeneratedReport] = useState('');
+            const [isGenerating, setIsGenerating] = useState(false);
+            const generateReport = async () => {
+                if(!reportClient) return notify("Select a client", "error");
+                setIsGenerating(true);
+                try { const text = await APIService.generateContent(`Write a web development proposal for ${reportClient}. Include SEO audit.`); setGeneratedReport(text); } catch(e) { notify("AI Error", 'error'); }
+                setIsGenerating(false);
+            };
+            return (
+                <div className="space-y-6 animate-fade-in max-w-4xl mx-auto">
+                    <header><h2 className="text-2xl font-bold text-white">AI Proposals</h2></header>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6"><div className="glass-panel p-6 rounded-xl space-y-4 h-fit"><h3 className="font-bold text-white border-b border-slate-700 pb-2">Config</h3><div><label className="text-xs text-slate-400 block mb-1">Client</label><input className="w-full glass-input p-2 rounded" value={reportClient} onChange={e=>setReportClient(e.target.value)} placeholder="Client Name" /></div><button onClick={generateReport} disabled={isGenerating} className="w-full bg-brand text-white py-2 rounded font-bold hover:bg-blue-600">{isGenerating ? '...' : 'Generate'}</button></div><div className="md:col-span-2 glass-panel p-6 rounded-xl min-h-[400px] flex flex-col"><textarea className="flex-1 bg-transparent text-slate-300 mt-4 resize-none focus:outline-none font-mono text-sm leading-relaxed" placeholder="Result..." value={generatedReport} readOnly></textarea></div></div>
+                </div>
+            );
+        };
+
+        const SettingsView = ({ settings, setSettings, saveSettings }) => (
+            <div className="max-w-4xl mx-auto animate-fade-in">
+                <h2 className="text-2xl font-bold text-white mb-6">Integrations & Settings</h2>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="glass-panel p-8 rounded-xl space-y-6">
+                        <h3 className="text-lg font-semibold text-white border-b border-slate-700 pb-2">Core API Keys</h3>
+                        <div><label className="text-xs text-slate-400">Gemini AI (Required)</label><input type="password" value={settings.gemini || ''} onChange={e=>setSettings({...settings, gemini:e.target.value})} className="w-full glass-input p-2 rounded" /></div>
+                        <div><label className="text-xs text-slate-400">Apollo.io</label><input type="password" value={settings.apollo || ''} onChange={e=>setSettings({...settings, apollo:e.target.value})} className="w-full glass-input p-2 rounded" /></div>
+                    </div>
+                    
+                    <div className="space-y-6">
+                        <div className="glass-panel p-8 rounded-xl space-y-4">
+                            <h3 className="text-lg font-semibold text-white border-b border-slate-700 pb-2">Social & Ads</h3>
+                            <div className="space-y-4">
+                                <div className="integration-card p-4 rounded-lg bg-slate-800 border border-slate-700 flex justify-between items-center">
+                                    <div className="flex items-center gap-3"><i className="fa-brands fa-facebook text-blue-500 text-xl"></i><div><h4 className="text-sm font-bold text-white">Meta / Facebook</h4><p className="text-xs text-slate-400">Ads & Posts</p></div></div>
+                                    <div className="flex flex-col gap-2 w-1/2">
+                                        <input placeholder="App ID" className="glass-input p-1 text-xs rounded" value={settings.meta_app_id || ''} onChange={e=>setSettings({...settings, meta_app_id:e.target.value})} />
+                                        <input placeholder="Access Token" type="password" className="glass-input p-1 text-xs rounded" value={settings.meta_token || ''} onChange={e=>setSettings({...settings, meta_token:e.target.value})} />
+                                    </div>
+                                </div>
+                                <div className="integration-card p-4 rounded-lg bg-slate-800 border border-slate-700 flex justify-between items-center">
+                                    <div className="flex items-center gap-3"><i className="fa-brands fa-google text-red-500 text-xl"></i><div><h4 className="text-sm font-bold text-white">Google Ads</h4><p className="text-xs text-slate-400">Search & YouTube</p></div></div>
+                                    <div className="flex flex-col gap-2 w-1/2">
+                                        <input placeholder="Client ID" className="glass-input p-1 text-xs rounded" value={settings.google_id || ''} onChange={e=>setSettings({...settings, google_id:e.target.value})} />
+                                        <input placeholder="Dev Token" type="password" className="glass-input p-1 text-xs rounded" value={settings.google_token || ''} onChange={e=>setSettings({...settings, google_token:e.target.value})} />
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </aside>
+                        <button onClick={saveSettings} className="w-full bg-brand hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-bold shadow-lg">Save All Configurations</button>
+                    </div>
+                </div>
+            </div>
+        );
 
-                    {/* Content Area */}
-                    <main className="flex-1 bg-[#020617] relative flex flex-col">
-                        <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
-                            {view === 'dashboard' && renderDashboard()}
-                            {view === 'projects' && renderProjects()}
-                            {view === 'reports' && renderReports()}
-                            {view === 'leads' && renderLeads()}
-                            {view === 'inbox' && renderInbox()}
-                            {view === 'calendar' && renderCalendar()}
-                            {view === 'growth' && renderGrowth()}
-                            {view === 'invoices' && renderInvoices()}
-                            {view === 'settings' && renderSettings()}
+        // --- APP COMPONENT ---
+
+        const App = () => {
+            const [view, setView] = useState('dashboard');
+            const [leads, setLeads] = useState([]);
+            const [invoices, setInvoices] = useState([]);
+            const [tasks, setTasks] = useState([]);
+            const [inbox, setInbox] = useState([]);
+            const [notification, setNotification] = useState(null);
+            const [adStats, setAdStats] = useState({ spend: 0 });
+            const [isMobileOpen, setIsMobileOpen] = useState(false);
+            const [modal, setModal] = useState({ open: false, type: null, data: null });
+            const [loading, setLoading] = useState(false);
+            const [settings, setSettings] = useState({ apollo: '', meta: '', meta_ad_account: '', gemini: '', meta_app_id: '', meta_token: '', google_id: '', google_token: '', tiktok_id: '', tiktok_token: '' });
+
+            useEffect(() => {
+                setLeads(Storage.getLeads());
+                setInvoices(Storage.getInvoices());
+                setTasks(Storage.getTasks());
+                setInbox(Storage.getInbox());
+                setSettings(Storage.getSettings());
+                APIService.getAdStats().then(setAdStats);
+            }, []);
+
+            useEffect(() => { Storage.saveLeads(leads); }, [leads]);
+            useEffect(() => { Storage.saveInvoices(invoices); }, [invoices]);
+            useEffect(() => { Storage.saveTasks(tasks); }, [tasks]);
+            useEffect(() => { Storage.saveInbox(inbox); }, [inbox]);
+
+            const notify = (msg, type = 'success') => { setNotification({ msg, type }); setTimeout(() => setNotification(null), 3000); };
+            const saveSettings = () => { Storage.saveSettings(settings); notify("Settings saved."); };
+
+            // Handlers
+            const handleFindLeads = async (term) => {
+                if(!term) return;
+                setLoading(true);
+                try {
+                    const newLeads = await APIService.generateContent(`Generate 3 mock leads for web design services "${term}" in JSON format array [{name, contact, email, status:'New', source:'Search', score:80}]`);
+                    const parsed = JSON.parse(newLeads.replace(/```json/g,'').replace(/```/g,''));
+                    const formatted = parsed.map(l => ({...l, id: Date.now() + Math.random()}));
+                    setLeads([...formatted, ...leads]);
+                    notify(`Found ${formatted.length} leads`);
+                } catch(e) { notify("Search failed (Check AI Key)", 'error'); }
+                setLoading(false);
+            };
+            const deleteLead = (id) => { if(confirm("Delete lead?")) { setLeads(leads.filter(l => l.id !== id)); notify("Lead deleted"); } };
+            const deleteInvoice = (id) => { if(confirm("Delete invoice?")) { setInvoices(invoices.filter(i => i.id !== id)); notify("Invoice deleted"); } };
+            const deleteMessage = (id) => { if(confirm("Delete conversation?")) { setInbox(inbox.filter(m => m.id !== id)); notify("Conversation deleted"); } };
+            const handleMoveLead = (id) => { setLeads(leads.map(l => l.id === id ? { ...l, status: l.status === 'New' ? 'Contacted' : 'Booked' } : l)); };
+            const handleSendEmail = async (e) => { e.preventDefault(); setLoading(true); await APIService.sendEmail(); notify("Email Sent!"); setModal({open: false}); setLoading(false); };
+            const handleCreateInvoice = async (e) => { e.preventDefault(); setLoading(true); const formData = new FormData(e.target); const newInv = { id: generateId(), client: formData.get('client'), amount: parseFloat(formData.get('amount')), status: 'Pending', date: new Date().toISOString().split('T')[0], desc: formData.get('desc') }; setInvoices([newInv, ...invoices]); notify('Invoice Created'); setModal({ open: false }); setLoading(false); };
+
+            return (
+                <div className="flex h-screen overflow-hidden text-sm text-slate-200">
+                    <Sidebar view={view} setView={setView} isMobileOpen={isMobileOpen} setIsMobileOpen={setIsMobileOpen} />
+                    <main className="flex-1 bg-[#020617] relative flex flex-col w-full">
+                        <div className="lg:hidden p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950">
+                            <h1 className="font-bold text-white">CarliTech OS</h1>
+                            <button onClick={() => setIsMobileOpen(true)} className="text-white"><i className="fa-solid fa-bars text-xl"></i></button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8">
+                            {view === 'dashboard' && <DashboardView leads={leads} invoices={invoices} adStats={adStats} setView={setView} />}
+                            {view === 'projects' && <ProjectsView tasks={tasks} setTasks={setTasks} notify={notify} />}
+                            {view === 'calendar' && <CalendarView />}
+                            {view === 'growth' && <GrowthView notify={notify} />}
+                            {view === 'leads' && <LeadsView leads={leads} handleFindLeads={handleFindLeads} loading={loading} handleMoveLead={handleMoveLead} deleteLead={deleteLead} setModal={setModal} />}
+                            {view === 'inbox' && <InboxView inbox={inbox} deleteMessage={deleteMessage} />}
+                            {view === 'invoices' && <InvoicesView invoices={invoices} setModal={setModal} deleteInvoice={deleteInvoice} />}
+                            {view === 'reports' && <ReportsView notify={notify} leads={leads} />}
+                            {view === 'settings' && <SettingsView settings={settings} setSettings={setSettings} saveSettings={saveSettings} />}
                         </div>
                     </main>
-
-                    {/* Global Modals */}
-                    {notification && (
-                        <div className={`fixed top-6 right-6 px-6 py-4 rounded-lg shadow-2xl animate-fade-in flex items-center z-50 text-white ${notification.type === 'error' ? 'bg-red-600' : 'bg-brand'}`}>
-                            <i className={`fa-solid ${notification.type === 'error' ? 'fa-triangle-exclamation' : 'fa-check-circle'} mr-3`}></i>
-                            {notification.msg}
-                        </div>
-                    )}
-
-                    <Modal isOpen={modal.open} onClose={() => setModal({ open: false })} title={modal.type === 'email' ? 'Compose Message' : 'Create Payment Link'}>
-                        {modal.type === 'email' && (
+                    {notification && <div className={`fixed top-6 right-6 px-6 py-4 rounded-lg shadow-2xl animate-fade-in flex items-center z-50 text-white ${notification.type === 'error' ? 'bg-red-600' : 'bg-brand'}`}><i className="fa-solid fa-bell mr-3"></i>{notification.msg}</div>}
+                    
+                    <Modal isOpen={modal.open} onClose={() => setModal({ open: false })} title={modal.type === 'email' ? 'Compose' : 'Invoice'}>
+                        {modal.type === 'email' ? (
                             <form onSubmit={handleSendEmail} className="space-y-4">
-                                <div>
-                                    <label className="block text-xs text-slate-400 mb-1">To</label>
-                                    <input type="text" disabled value={modal.data.to} className="w-full glass-input px-3 py-2 rounded text-slate-400" />
-                                </div>
-                                <div>
-                                    <label className="block text-xs text-slate-400 mb-1">Subject</label>
-                                    <input name="subject" required type="text" className="w-full glass-input px-3 py-2 rounded" placeholder="Booking Confirmation / Promo..." />
-                                </div>
-                                <div>
-                                    <label className="block text-xs text-slate-400 mb-1">Message</label>
-                                    <textarea name="body" required rows="6" className="w-full glass-input px-3 py-2 rounded" placeholder="Hi there..."></textarea>
-                                </div>
-                                <div className="flex justify-end gap-2">
-                                    <button type="button" onClick={async () => {
-                                        const aiText = await APIService.generateContent("Write a friendly text confirming a home massage booking.");
-                                        document.querySelector('textarea[name="body"]').value = aiText;
-                                    }} className="px-4 py-2 rounded text-indigo-400 hover:bg-slate-800"><i className="fa-solid fa-wand-magic-sparkles mr-1"></i> AI Write</button>
-                                    <button type="submit" disabled={loading} className="bg-brand px-6 py-2 rounded text-white font-bold hover:bg-green-600">
-                                        {loading ? 'Sending...' : 'Send Message'}
-                                    </button>
-                                </div>
+                                <input disabled value={modal.data?.to || ''} className="w-full glass-input px-3 py-2 rounded text-slate-400" />
+                                <input required placeholder="Subject" className="w-full glass-input px-3 py-2 rounded" />
+                                <textarea required rows="6" className="w-full glass-input px-3 py-2 rounded" placeholder="Message..."></textarea>
+                                <div className="flex justify-end gap-2"><button type="button" onClick={async () => { const aiText = await APIService.generateContent("Write a follow-up for a web design proposal."); document.querySelector('textarea').value = aiText; }} className="px-4 py-2 rounded text-indigo-400 hover:bg-slate-800"><i className="fa-solid fa-wand-magic-sparkles"></i> AI</button><button type="submit" disabled={loading} className="bg-brand px-6 py-2 rounded text-white">{loading ? '...' : 'Send'}</button></div>
                             </form>
-                        )}
-
-                        {modal.type === 'invoice' && (
+                        ) : (
                             <form onSubmit={handleCreateInvoice} className="space-y-4">
-                                <div>
-                                    <label className="block text-xs text-slate-400 mb-1">Client Name</label>
-                                    <input name="client" required type="text" className="w-full glass-input px-3 py-2 rounded" placeholder="e.g. Maria Santos" />
-                                </div>
-                                <div>
-                                    <label className="block text-xs text-slate-400 mb-1">Amount (PHP)</label>
-                                    <input name="amount" required type="number" className="w-full glass-input px-3 py-2 rounded" placeholder="1500" />
-                                </div>
-                                <div>
-                                    <label className="block text-xs text-slate-400 mb-1">Description</label>
-                                    <textarea name="desc" className="w-full glass-input px-3 py-2 rounded" rows="3" placeholder="Service details (e.g. 2hr Swedish Massage)..."></textarea>
-                                </div>
-                                <div className="flex justify-end">
-                                    <button type="submit" disabled={loading} className="bg-brand px-6 py-2 rounded text-white font-bold hover:bg-green-600">
-                                        {loading ? 'Generating...' : 'Create Payment Link'}
-                                    </button>
-                                </div>
+                                <input name="client" required placeholder="Client Name" className="w-full glass-input px-3 py-2 rounded" />
+                                <input name="amount" required type="number" placeholder="Amount" className="w-full glass-input px-3 py-2 rounded" />
+                                <textarea name="desc" className="w-full glass-input px-3 py-2 rounded" rows="3" placeholder="Description..."></textarea>
+                                <div className="flex justify-end"><button type="submit" disabled={loading} className="bg-brand px-6 py-2 rounded text-white">{loading ? '...' : 'Create'}</button></div>
                             </form>
                         )}
                     </Modal>
